@@ -2,6 +2,7 @@ import customtkinter as ctk
 from pymongo import MongoClient
 from tkinter import messagebox, Scrollbar, Canvas, Frame, simpledialog
 from PIL import Image, ImageTk
+from bson.objectid import ObjectId
 
 # Membuat koneksi ke MongoDB
 client = MongoClient("mongodb://localhost:27017/")
