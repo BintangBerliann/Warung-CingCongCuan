@@ -2,7 +2,6 @@ import customtkinter as ctk
 from pymongo import MongoClient
 from tkinter import messagebox, Scrollbar, Canvas, Frame, simpledialog
 from PIL import Image, ImageTk
-from bson.objectid import ObjectId
 
 # Membuat koneksi ke MongoDB
 client = MongoClient("mongodb://localhost:27017/")
@@ -22,52 +21,6 @@ def add_to_cart(item, price, buyer_name):
 def delete_item_from_cart(item_id):
     collection_keranjang.delete_one({"_id": item_id})
     messagebox.showinfo("Keranjang", "Item telah dihapus dari keranjang.")
-
-# Fungsi untuk membuka window keranjang
-def open_cart_window(previous_window, buyer_name):
-    previous_window.destroy()
-    cart_window = ctk.CTk()
-    cart_window.title("Keranjang")
-    cart_window.geometry("360x640")
-
-    main_frame = ctk.CTkFrame(cart_window, fg_color="white")
-    main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-
-    welcome_label = ctk.CTkLabel(main_frame, text="Keranjang Anda", font=("Arial", 16, "bold"), text_color="black")
-    welcome_label.pack(pady=10)
-
-    # Ambil data keranjang dari database atau sumber lainnya
-    cart_items = collection_keranjang.find()  # Query mengambil data dari MongoDB
-    total_price = 0  # Inisialisasi total harga
-
-    # Tampilkan setiap item-menu dalam keranjang
-    for item in cart_items:
-        # Buat frame untuk setiap item-menu
-        item_frame = ctk.CTkFrame(main_frame, fg_color="white")
-        item_frame.pack(fill="x", pady=5)
-
-        # Tampilkan nama menu dan harga
-        item_label = ctk.CTkLabel(item_frame, text=f"{item['item']} - Rp{item['price']}", text_color="black")
-        item_label.pack(side="left", padx=10)
-
-        # Tambahkan harga item ke total harga
-        total_price += item['price']
-
-        # Buat tombol "hapus" untuk menghapus item-menu
-        delete_button = ctk.CTkButton(item_frame, text="Hapus", fg_color="#469173", hover_color="#345d4b", text_color="white", command=lambda item_id=item['_id']: delete_item_from_cart(item_id))
-        delete_button.pack(side="right", padx=10)
-
-    # Tampilkan total harga di bagian bawah
-    total_label = ctk.CTkLabel(main_frame, text=f"Total Harga: Rp{total_price}", font=("Arial", 14, "bold"), text_color="black", bg_color="white")
-    total_label.pack(pady=20)
-
-    order_button = ctk.CTkButton(main_frame, text="Pesan", width=200, height=40, fg_color="#469173", hover_color="#345d4b", text_color="white", command=lambda: place_order(cart_window, buyer_name))
-    order_button.pack(pady=20)
-
-    back_button = ctk.CTkButton(main_frame, text="Kembali", width=200, height=40, fg_color="#469173", hover_color="#345d4b", text_color="white", command=lambda: open_buyer_window("User", cart_window))
-    back_button.pack(pady=10)
-
-    cart_window.mainloop()
 
 # Fungsi untuk menempatkan pesanan
 def place_order(previous_window, buyer_name):
@@ -128,6 +81,86 @@ def delete_item(collection):
             print(f"Item {item_name} tidak ditemukan.")
     else:
         print("Pembatalan penghapusan item.")
+
+def validate_seller(username, password):
+    seller = collection_user.find_one({"username": username, "password": password})
+    return seller is not None
+
+# Fungsi untuk login sebagai penjual
+def login_seller(previous_window):
+    previous_window.destroy()
+    login_seller_window()
+
+# Fungsi untuk login sebagai pembeli
+def login_buyer(previous_window):
+    previous_window.destroy()
+    name_prompt_window()
+
+def save_username(name):
+    user_data = {"name": name}
+    collection_user.insert_one(user_data)
+
+def back_to_main(current_window):
+    current_window.destroy()
+    open_main_window()
+
+# Fungsi untuk menambahkan pesanan ke riwayat
+def add_order_to_history(cart_items):  
+    for item in cart_items:
+        collection_history.insert_one({
+            "item": item['item'],
+            "price": item['price'] 
+        })
+
+def fulfill_order(order_id):
+    collection_pesanan.delete_one({"_id": order_id})
+    messagebox.showinfo("Pesanan", "Pesanan telah diproses.")
+
+# Fungsi untuk membuka window keranjang
+def open_cart_window(previous_window, buyer_name):
+    previous_window.destroy()
+    cart_window = ctk.CTk()
+    cart_window.title("Keranjang")
+    cart_window.geometry("360x640")
+
+    main_frame = ctk.CTkFrame(cart_window, fg_color="white")
+    main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+    welcome_label = ctk.CTkLabel(main_frame, text="Keranjang Anda", font=("Arial", 16, "bold"), text_color="black")
+    welcome_label.pack(pady=10)
+
+    # Ambil data keranjang dari database atau sumber lainnya
+    cart_items = collection_keranjang.find()  # Query mengambil data dari MongoDB
+    total_price = 0  # Inisialisasi total harga
+
+    # Tampilkan setiap item-menu dalam keranjang
+    for item in cart_items:
+        # Buat frame untuk setiap item-menu
+        item_frame = ctk.CTkFrame(main_frame, fg_color="white")
+        item_frame.pack(fill="x", pady=5)
+
+        # Tampilkan nama menu dan harga
+        item_label = ctk.CTkLabel(item_frame, text=f"{item['item']} - Rp{item['price']}", text_color="black")
+        item_label.pack(side="left", padx=10)
+
+        # Tambahkan harga item ke total harga
+        total_price += item['price']
+
+        # Buat tombol "hapus" untuk menghapus item-menu
+        delete_button = ctk.CTkButton(item_frame, text="Hapus", fg_color="#469173", hover_color="#345d4b", text_color="white", command=lambda item_id=item['_id']: delete_item_from_cart(item_id))
+        delete_button.pack(side="right", padx=10)
+
+    # Tampilkan total harga di bagian bawah
+    total_label = ctk.CTkLabel(main_frame, text=f"Total Harga: Rp{total_price}", font=("Arial", 14, "bold"), text_color="black", bg_color="white")
+    total_label.pack(pady=20)
+
+    order_button = ctk.CTkButton(main_frame, text="Pesan", width=200, height=40, fg_color="#469173", hover_color="#345d4b", text_color="white", command=lambda: place_order(cart_window, buyer_name))
+    order_button.pack(pady=20)
+
+    back_button = ctk.CTkButton(main_frame, text="Kembali", width=200, height=40, fg_color="#469173", hover_color="#345d4b", text_color="white", command=lambda: open_buyer_window("User", cart_window))
+    back_button.pack(pady=10)
+
+    cart_window.mainloop()
 
 # Function to open the food window
 def open_food_window_seller(previous_window):
@@ -206,7 +239,6 @@ def open_food_window_seller(previous_window):
     remove_button.pack(side="left", padx=5, pady=5)
 
     food_window.mainloop()
-
 
 # Function to open the food window
 def open_drink_window_seller(previous_window):
@@ -288,7 +320,6 @@ def open_drink_window_seller(previous_window):
 
     drink_window.mainloop()
 
-
 # Fungsi untuk membuka window penjual
 def open_seller_window(previous_window):
     previous_window.destroy()
@@ -334,10 +365,6 @@ def open_seller_window(previous_window):
     cart_button.pack(pady=20)
 
     seller_window.mainloop()
-
-def validate_seller(username, password):
-    seller = collection_user.find_one({"username": username, "password": password})
-    return seller is not None
 
 # Fungsi untuk membuka window login penjual
 def login_seller_window():
@@ -387,20 +414,6 @@ def login_seller_window():
 
     seller_window.mainloop()
 
-# Fungsi untuk login sebagai penjual
-def login_seller(previous_window):
-    previous_window.destroy()
-    login_seller_window()
-
-# Fungsi untuk login sebagai pembeli
-def login_buyer(previous_window):
-    previous_window.destroy()
-    name_prompt_window()
-
-def save_username(name):
-    user_data = {"name": name}
-    collection_user.insert_one(user_data)
-
 # Fungsi untuk membuka window prompt nama
 def name_prompt_window():
     name_window = ctk.CTk()
@@ -423,15 +436,6 @@ def name_prompt_window():
     continue_button.pack(pady=20)
 
     name_window.mainloop()
-
-# Fungsi untuk menambahkan pesanan ke riwayat
-def add_order_to_history(user_id, cart_items):  
-    for item in cart_items:
-        collection_history.insert_one({
-            "user_id": ObjectId(user_id),
-            "item": item['item'],
-            "price": item['price'] 
-        })
 
 # Fungsi untuk membuka jendela riwayat pemesanan
 def open_order_history_window():
@@ -499,10 +503,6 @@ def open_pesanan_window(previous_window):
     back_button.pack(pady=10)
 
     pesanan_window.mainloop()
-
-def fulfill_order(order_id):
-    collection_pesanan.delete_one({"_id": order_id})
-    messagebox.showinfo("Pesanan", "Pesanan telah diproses.")
 
 # Fungsi untuk membuka window pembeli
 def open_buyer_window(name, previous_window):
@@ -693,10 +693,6 @@ def open_food_window(previous_window, buyer_name):
                 print("Invalid food structure:", food)
 
     food_window.mainloop()
-
-def back_to_main(current_window):
-    current_window.destroy()
-    open_main_window()
 
 def open_main_window():
     # Membuat window utama
